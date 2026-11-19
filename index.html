@@ -162,7 +162,7 @@ label{font-weight:900;color:#67617e}.rows>div{border-bottom:1px dashed #e8e3f0;p
       <div class="hint" id="pumpTimerState" style="margin:0">Stopwatch mulai saat pompa menyala.</div>
     </div>
     <div class="sw-actions">
-      <button class="b-orange" id="btnResetStopwatch" type="button">↺ Reset</button>
+      <button class="b-orange ctl" id="btnResetStopwatch" type="button">↺ Reset</button>
     </div>
   </div>
 </section>
@@ -178,14 +178,13 @@ label{font-weight:900;color:#67617e}.rows>div{border-bottom:1px dashed #e8e3f0;p
     <div class="card val c-green"><div class="t">📟 Transmitter</div><span class="v" data-k="tx.kpa" data-d="1">—</span><span class="u">kPa</span></div>
   </div>
   <div class="card c-yellow" style="margin-top:16px">
-    <h2>⬆⬇ Kontrol aktuator <span class="pill" id="servoState">berhenti</span></h2>
-    <div class="actbtns" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
-      <button class="b-green ctl" id="btnUp">▲ Naik</button>
-      <button class="b-red ctl" id="btnStop">■ Berhenti</button>
-      <button class="b-blue ctl" id="btnDown">▼ Turun</button>
+    <h2>🛠️ Kontrol Suntikan <span class="pill" id="servoState">Berhenti</span></h2>
+    <div class="actbtns" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px">
+      <button class="b-green ctl" id="btnServoNaik">▲ NAIK</button>
+      <button class="b-red" id="btnServoStop">■ STOP</button>
+      <button class="b-blue ctl" id="btnServoTurun">▼ TURUN</button>
     </div>
-    <label>Durasi gerak per perintah: <span id="durLbl">400</span> ms</label>
-    <input type="range" id="dur" min="100" max="2000" step="50" value="400" style="width:100%">
+    <p class="hint">Durasi masing-masing arah dapat diatur di menu Pengaturan. Pastikan mekanisme tidak menyentuh batas piston.</p>
   </div>
 
   <div class="grid two" style="margin-top:16px">
@@ -204,8 +203,14 @@ label{font-weight:900;color:#67617e}.rows>div{border-bottom:1px dashed #e8e3f0;p
     <div class="card c-green">
       <h2>🧱 Benda Padat</h2>
       <p class="hint" style="margin:0 0 6px">P = F ÷ A &nbsp;·&nbsp; masukkan ukuran satu bidang benda yang menempel</p>
-      <label>Panjang bidang (cm)</label><input type="number" id="sP" min="0.1" step="0.1" value="4">
-      <label>Lebar bidang (cm)</label><input type="number" id="sL" min="0.1" step="0.1" value="4">
+      <label for="solidBlock">Pilih benda padat</label>
+      <select id="solidBlock" style="width:100%;padding:11px 12px;border:1.5px solid #e5e0f1;border-radius:13px;background:#fcfbff;font:inherit">
+        <option value="A">Benda A — 15 × 5 cm (75 cm²)</option>
+        <option value="B">Benda B — 4 × 15 cm (60 cm²)</option>
+        <option value="C">Benda C — 4 × 5 cm (20 cm²)</option>
+      </select>
+      <label>Panjang bidang (cm)</label><input type="number" id="sP" value="15" readonly style="background:#f1f5f9">
+      <label>Lebar bidang (cm)</label><input type="number" id="sL" value="5" readonly style="background:#f1f5f9">
       <label>Percepatan gravitasi g (m/s²)</label><input type="number" id="sG" value="9.8" min="0.1" step="0.01">
       <label>Massa dari load cell (g)</label>
       <input type="text" id="sM" readonly value="—" style="background:#f1f5f9">
@@ -241,6 +246,16 @@ label{font-weight:900;color:#67617e}.rows>div{border-bottom:1px dashed #e8e3f0;p
       <div class="inl"><input type="number" id="calGram" min="1" step="0.1" placeholder="mis. 500"><button class="b-purple ctl" id="btnCal">Kalibrasi</button></div>
       <div class="hint">Kosongkan load cell → Tare → letakkan massa acuan → isi nilainya → Kalibrasi.</div>
     </div>
+    <div class="card c-purple">
+      <h2>⚙ Pengaturan Durasi Servo</h2>
+      <p class="hint">Atur lama gerak tiap tombol. Setelah mencapai durasi, servo otomatis berhenti. Nilai tersimpan di ESP32.</p>
+      <label for="servoNaikMs">Durasi NAIK (milidetik)</label>
+      <input id="servoNaikMs" type="number" min="100" max="600000" step="100" value="1000">
+      <label for="servoTurunMs">Durasi TURUN (milidetik)</label>
+      <input id="servoTurunMs" type="number" min="100" max="600000" step="100" value="1000">
+      <button class="b-purple ctl" id="btnServoSave" style="width:100%;margin-top:14px">Simpan Durasi ke ESP32</button>
+      <p class="hint">Contoh: 1000 = 1 detik; 600000 = 10 menit. Durasi lama hanya untuk uji tanpa beban atau dengan limit switch. Jika piston mentok, durasi saja tidak akan menghentikannya lebih awal.</p>
+    </div>
     <div class="card c-orange">
       <h2>WiFi <button class="ctl" id="btnScan" style="padding:4px 10px;font-size:12px">Pindai</button></h2>
       <div class="rows"><div><span>Tersambung ke</span><b id="wSsid">—</b></div><div><span>IP</span><b data-k="wifi.ip">—</b></div><div><span>Sinyal</span><b><span data-k="wifi.rssi" data-d="0">—</span> dBm</b></div></div>
@@ -263,11 +278,13 @@ const DEF={host:'f84ce95af63a4865acc74f0d000a1e4a.s1.eu.hivemq.cloud',port:8884,
 let cfg={...DEF};try{cfg={...DEF,...JSON.parse(localStorage.getItem(KEY)||'{}')};if(!cfg.pass)cfg.pass=DEF.pass}catch(e){}
 let client=null,mqttUp=false,devOnline=false,lastTel=0,tel=null,cur='conn';
 
-// Stopwatch menghitung hanya selama pompa terdeteksi menyala.
-let pumpRunning=false,pumpStartedAt=null,pumpElapsedMs=0;
-let pumpWatchInterval=null;
+// Stopwatch berbasis durasi dari ESP32, bukan waktu klik di browser.
+// Di antara telemetry, performance.now() menghaluskan tampilan pada interval 100 ms.
+let pumpRunning=false,pumpElapsedMs=0,pumpSyncAt=null,pumpHasSync=false;
+let pumpPending=false,pumpResetPending=false,pumpWatchInterval=null;
 function stopwatchElapsed(){
-  return pumpElapsedMs+(pumpRunning&&pumpStartedAt!==null?Date.now()-pumpStartedAt:0);
+  const fresh=pumpSyncAt!==null && performance.now()-pumpSyncAt<=6000;
+  return pumpElapsedMs+(pumpRunning&&fresh?performance.now()-pumpSyncAt:0);
 }
 function renderStopwatch(){
   const total=Math.max(0,stopwatchElapsed());
@@ -276,23 +293,30 @@ function renderStopwatch(){
   const seconds=Math.floor((tenths%600)/10);
   const tenth=tenths%10;
   $('#pumpStopwatch').textContent=String(minutes).padStart(2,'0')+':'+String(seconds).padStart(2,'0')+'.'+tenth;
-  $('#pumpTimerState').textContent=pumpRunning?'Pompa menyala · stopwatch berjalan':'Pompa mati · stopwatch berhenti';
+  const fresh=mqttUp&&devOnline&&pumpHasSync&&pumpSyncAt!==null&&performance.now()-pumpSyncAt<=6000;
+  $('#pumpTimerState').textContent=!pumpHasSync?'Menunggu waktu dari ESP32…':
+    !fresh?'Koneksi/data tertunda · menunggu sinkronisasi':
+    pumpResetPending?'Menunggu konfirmasi reset dari alat…':
+    pumpPending?'Menunggu konfirmasi pompa dari alat…':
+    pumpRunning?'Pompa menyala · waktu ESP32':'Pompa mati · stopwatch berhenti';
 }
-function updatePumpStopwatch(isOn){
-  if(isOn&&!pumpRunning){
-    pumpRunning=true;
-    pumpStartedAt=Date.now();
-  }else if(!isOn&&pumpRunning){
-    pumpElapsedMs+=Date.now()-pumpStartedAt;
-    pumpRunning=false;
-    pumpStartedAt=null;
+function updatePumpStopwatch(t){
+  // Hanya terima nilai otoritatif ESP32; web tidak pernah mereset waktu lokal sendiri.
+  if(typeof t.pump_elapsed_ms==='number' && Number.isFinite(t.pump_elapsed_ms) && t.pump_elapsed_ms>=0){
+    pumpElapsedMs=t.pump_elapsed_ms;
+    pumpRunning=!!t.pump;
+    pumpSyncAt=performance.now();
+    pumpHasSync=true;
   }
   renderStopwatch();
 }
 function resetPumpStopwatch(){
-  pumpElapsedMs=0;
-  pumpStartedAt=pumpRunning?Date.now():null;
-  renderStopwatch();
+  if(pumpResetPending)return;
+  if(send('pump_reset','1')){
+    pumpResetPending=true;
+    renderStopwatch();
+    setTimeout(()=>{if(pumpResetPending){pumpResetPending=false;renderStopwatch();toast('Belum ada konfirmasi reset. Periksa koneksi alat.',true)}},6000);
+  }
 }
 
 const get=(o,p)=>p.split('.').reduce((a,k)=>a==null?null:a[k],o);
@@ -333,8 +357,11 @@ function onMsg(topic,buf){
   if(sub==='status'){devOnline=text==='online';chip('#chipDev',devOnline?'ok':'bad','Alat: '+(devOnline?'online':'offline'));log('Alat '+(devOnline?'online':'offline'),devOnline?'g':'e');refreshUI();return}
   let j;try{j=JSON.parse(text)}catch(e){return}
   if(sub==='telemetry'){tel=j;lastTel=Date.now();renderTel(j)}
-  else if(sub==='info'){$('#iFw').textContent=j.fw+' · '+j.mac;$('#pumpMax').textContent=j.pump_max_s||'—'}
-  else if(sub==='event'){toast(j.msg,!j.ok);log(`[${j.type}] ${j.msg}`,j.ok?'g':'e')}
+  else if(sub==='info'){$('#iFw').textContent=j.fw+' · '+j.mac;$('#pumpMax').textContent=j.pump_max_s||'—';if(Number.isFinite(j.servo_naik_ms))$('#servoNaikMs').value=j.servo_naik_ms;if(Number.isFinite(j.servo_turun_ms))$('#servoTurunMs').value=j.servo_turun_ms}
+  else if(sub==='event'){
+    if(j.type==='pump_reset')pumpResetPending=false;
+    toast(j.msg,!j.ok);log(`[${j.type}] ${j.msg}`,j.ok?'g':'e');
+  }
   else if(sub==='wifi/scan')renderNets(j.networks||[]);
 }
 function renderTel(t){
@@ -345,8 +372,13 @@ function renderTel(t){
   $('#wSsid').textContent=t.wifi.ssid||'—';
   $('#iUp').textContent=fmtUp(t.up);
   $('#swPump').classList.toggle('on',!!t.pump);
-  updatePumpStopwatch(!!t.pump);
-  const ss=$('#servoState');ss.textContent=t.servo.run?(t.servo.dir>0?'naik…':'turun…'):'berhenti';ss.className='pill'+(t.servo.run?' ok':'');
+  updatePumpStopwatch(t);
+  pumpPending=false;
+  // Reset dinyatakan selesai setelah telemetry menunjukkan nilai baru (event bisa datang lebih dulu).
+  if(pumpResetPending&&t.pump_elapsed_ms<1500)pumpResetPending=false;
+  const sv=t.servo||{};
+  $('#servoState').textContent=sv.run?(sv.dir>0?'Naik':'Turun'):'Berhenti';
+  $('#servoState').className='pill'+(sv.run?' ok':'');
   [['#sBme',t.sensors.bme],['#sAds',t.sensors.ads],['#sHx',t.sensors.hx]].forEach(([id,ok])=>{const e=$(id);e.className='pill '+(ok?'ok':'bad');e.textContent=e.textContent.split(' ')[0]+(ok?' ✓':' ✗')});
   const m=fmt(t.load.g,1)+' g';$('#oM').value=m;$('#sM').value=m;
   $('#lastUp').textContent=new Date().toLocaleTimeString('id-ID');
@@ -359,8 +391,25 @@ function renderNets(list){
     b.onclick=()=>{$('#newSsid').value=n.ssid;$('#newPass').focus()};box.appendChild(b)});
   $('#btnScan').disabled=false;$('#btnScan').textContent='Pindai';
 }
-function refreshUI(){const on=mqttUp&&devOnline;document.querySelectorAll('.ctl').forEach(b=>b.disabled=!on)}
+function refreshUI(){const on=mqttUp&&devOnline;document.querySelectorAll('.ctl').forEach(b=>b.disabled=!on);
+  if(!on){pumpPending=false;pumpResetPending=false;}
+  $('#btnServoNaik').disabled=!on;
+  $('#btnServoTurun').disabled=!on;
+  renderStopwatch();
+}
 setInterval(()=>{if(devOnline&&Date.now()-lastTel>6000)chip('#chipDev','warn','Alat: data tertunda')},2000);
+
+/* ---- pilihan benda padat A, B, C ---- */
+const solidBlocks={A:{length:15,width:5},B:{length:4,width:15},C:{length:4,width:5}};
+function updateSolidBlock(){
+  const key=$('#solidBlock').value;
+  const b=solidBlocks[key]||solidBlocks.A;
+  $('#sP').value=b.length;
+  $('#sL').value=b.width;
+  $('#sRes').classList.remove('show');
+}
+$('#solidBlock').addEventListener('change',updateSolidBlock);
+updateSolidBlock();
 
 /* ---- perhitungan ---- */
 const getMass=()=>{if(!tel||tel.load.g==null){toast('Belum ada data massa dari load cell.',true);return null}return tel.load.g};
@@ -385,22 +434,32 @@ $('#btnSol').onclick=()=>{
   r.innerHTML=`<div class="rows">
     <div><span>Massa (m)</span><b>${num(m,4)} kg</b></div>
     <div><span>Gaya F = m × g</span><b>${num(F,4)} N</b></div>
-    <div><span>Luas bidang (A)</span><b>${num(panjang*lebar,2)} cm²</b></div>
+    <div><span>Benda ${$('#solidBlock').value} - luas bidang (A)</span><b>${num(panjang*lebar,2)} cm²</b></div>
   </div>
   <div class="big">Tekanan P = ${num(P,1)} Pa</div>
   <div class="hint">Luas bidang kontak = ${num(A,6)} m²</div>`;
 };
 
 /* ---- kontrol ---- */
-$('#swPump').onclick=()=>send('pump',tel&&tel.pump?'off':'on');
+$('#swPump').onclick=()=>{
+  if(pumpPending)return;
+  if(send('pump',tel&&tel.pump?'off':'on')){
+    pumpPending=true;renderStopwatch();
+    setTimeout(()=>{if(pumpPending){pumpPending=false;renderStopwatch()}},5000);
+  }
+};
 $('#btnResetStopwatch').onclick=resetPumpStopwatch;
 pumpWatchInterval=setInterval(renderStopwatch,100);
 renderStopwatch();
-const dur=()=>+$('#dur').value;
-$('#dur').oninput=()=>$('#durLbl').textContent=dur();
-$('#btnUp').onclick=()=>send('actuator',{dir:'up',ms:dur()});
-$('#btnDown').onclick=()=>send('actuator',{dir:'down',ms:dur()});
-$('#btnStop').onclick=()=>send('actuator',{dir:'stop'});
+$('#btnServoNaik').onclick=()=>send('servo_move','naik');
+$('#btnServoTurun').onclick=()=>send('servo_move','turun');
+$('#btnServoStop').onclick=()=>send('servo_move','stop');
+$('#btnServoSave').onclick=()=>{
+  const n=Number($('#servoNaikMs').value),t=Number($('#servoTurunMs').value);
+  if(!Number.isInteger(n)||!Number.isInteger(t)||n<100||t<100||n>600000||t>600000)
+    return toast('Durasi harus bilangan bulat 100–600000 ms.',true);
+  if(send('servo_config',{naik_ms:n,turun_ms:t}))toast('Pengaturan dikirim. Tunggu konfirmasi ESP32.');
+};
 $('#btnTare').onclick=()=>{if(confirm('Pastikan load cell TANPA beban. Lanjutkan tare?'))send('tare','1')};
 $('#btnRestart').onclick=()=>{if(confirm('Restart perangkat?'))send('restart','1')};
 $('#btnCal').onclick=()=>{const g=parseFloat($('#calGram').value);if(!(g>0))return toast('Isi massa acuan lebih dari 0.',true);
